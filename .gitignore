@@ -22,6 +22,8 @@ src/defi-tx
 src/defi-wallet
 src/test/test_defi
 src/test/test_defi_fuzzy
+src/rest
+
 
 # autoreconf
 Makefile.in
