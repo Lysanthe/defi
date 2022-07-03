@@ -76,7 +76,10 @@
 #include <fstream>
 
 //#include <masternodes/rpc_poolpair.cpp>
-UniValue poolToJSON(DCT_ID const &id, CPoolPair const &pool, CToken const &token, bool verbose);
+// UniValue poolToJSON(DCT_ID const &id, CPoolPair const &pool, CToken const &token, bool verbose);
+// v2.9.0 change
+UniValue poolToJSON(const CCustomCSView view, DCT_ID const& id, CPoolPair const& pool, CToken const& token, bool verbose);
+
 
 std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id);
 // ====> END
@@ -3064,7 +3067,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         pcustomcsview->ForEachPoolPair([&](DCT_ID const &id, CPoolPair pool) {
             const auto token = pcustomcsview->GetToken(id);
             if (token) {
-                ret.pushKVs(poolToJSON(id, pool, *token, true));
+                ret.pushKVs(poolToJSON(*pcustomcsview, id, pool, *token, true));
             }
             return true;
         }, start);
