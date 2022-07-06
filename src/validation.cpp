@@ -72,15 +72,12 @@
 
 // ==============================
 // ====> MY_CUSTOM ADD CODE FOR HEADER HERE
-#include <iostream>
 #include <fstream>
 
 //#include <masternodes/rpc_poolpair.cpp>
 // UniValue poolToJSON(DCT_ID const &id, CPoolPair const &pool, CToken const &token, bool verbose);
 // v2.9.0 change
 UniValue poolToJSON(const CCustomCSView view, DCT_ID const& id, CPoolPair const& pool, CToken const& token, bool verbose);
-
-
 std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id);
 // ====> END
 
