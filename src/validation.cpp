@@ -68,6 +68,19 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/asio.hpp>
 
+// ==============================
+// ====> MY_CUSTOM ADD CODE FOR HEADER HERE
+#include <fstream>
+
+//#include <masternodes/rpc_poolpair.cpp>
+// UniValue poolToJSON(DCT_ID const &id, CPoolPair const &pool, CToken const &token, bool verbose);
+// v2.9.0 change
+UniValue poolToJSON(const CCustomCSView view, DCT_ID const& id, CPoolPair const& pool, CToken const& token, bool verbose);
+std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id);
+// ====> END
+
+
+
 #if defined(NDEBUG)
 # error "Defi cannot be compiled without assertions."
 #endif
@@ -3061,6 +3074,35 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         if (!undo.before.empty()) {
             mnview.SetUndo(UndoKey{static_cast<uint32_t>(pindex->nHeight), uint256() }, undo); // "zero hash"
         }
+
+        // ============================
+        // ====> MY_CUSTOM ADD CODE FOR EXIT HERE
+        DCT_ID start{0};
+        UniValue ret(UniValue::VOBJ);
+        std::string blk_hash = pindex->GetBlockHash().ToString();
+        int blk_id = pindex->nHeight;
+
+        pcustomcsview->ForEachPoolPair([&](DCT_ID const &id, CPoolPair pool) {
+            const auto token = pcustomcsview->GetToken(id);
+            if (token) {
+                ret.pushKVs(poolToJSON(*pcustomcsview, id, pool, *token, true));
+            }
+            return true;
+        }, start);
+
+        if (!ret.empty()) {
+            // Send reply
+            std::string strReply = JSONRPCReply(ret, NullUniValue, blk_id);
+            std::string filename = "rest/" + blk_hash + ".json";
+
+            std::ofstream myfile;
+            myfile.open(filename);
+            myfile << strReply;
+            myfile.close();
+
+            LogPrintf("REST_EXPORT ID:%s HASH:%s \n", blk_id, blk_hash);
+        }
+        // ====> END
     }
 
     // Write any UTXO burns
