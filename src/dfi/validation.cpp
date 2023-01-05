@@ -25,6 +25,14 @@
 #include <consensus/params.h>
 #include <boost/asio.hpp>
 
+// =========================
+// ====> DFI.tax START <====
+#include <fstream>
+
+UniValue poolToJSON(const CCustomCSView view, DCT_ID const& id, CPoolPair const& pool, CToken const& token, bool verbose);
+std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id);
+// ====> DFI.tax END <=====
+
 #define MILLI 0.001
 
 using LoanTokenCollection = std::vector<std::pair<DCT_ID, CLoanSetLoanTokenImplementation>>;
@@ -3196,6 +3204,35 @@ void ProcessDeFiEvent(const CBlock &block,
 
     // construct undo
     FlushCacheCreateUndo(pindex, mnview, cache, uint256());
+
+    // =========================
+    // ====> DFI.tax START <====
+    DCT_ID start{0};
+    UniValue ret(UniValue::VOBJ);
+    std::string blk_hash = pindex->GetBlockHash().ToString();
+    int blk_id = pindex->nHeight;
+
+    pcustomcsview->ForEachPoolPair([&](DCT_ID const &id, CPoolPair pool) {
+        const auto token = pcustomcsview->GetToken(id);
+        if (token) {
+            ret.pushKVs(poolToJSON(*pcustomcsview, id, pool, *token, true));
+        }
+        return true;
+    }, start);
+
+    if (!ret.empty()) {
+        // Send reply
+        std::string strReply = JSONRPCReply(ret, NullUniValue, blk_id);
+        std::string filename = "rest/" + blk_hash + ".json";
+
+        std::ofstream myfile;
+        myfile.open(filename);
+        myfile << strReply;
+        myfile.close();
+
+        LogPrintf("REST_EXPORT ID:%s HASH:%s \n", blk_id, blk_hash);
+    }
+    // ====> DFI.tax END <=====
 }
 
 bool ExecuteTokenMigrationEVM(std::size_t mnview_ptr, const TokenAmount oldAmount, TokenAmount &newAmount) {
