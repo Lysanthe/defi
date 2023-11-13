@@ -1,5 +1,3 @@
-src/rest
-
 .code
 .cache
 .idea
@@ -155,3 +153,6 @@ contrib/devtools/split-debug.sh
 
 /lib/ain-contracts/**/cache
 /lib/ain-contracts/**/output
+
+/src/rest
+
