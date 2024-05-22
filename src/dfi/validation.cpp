@@ -28,8 +28,113 @@
 // =========================
 // ====> DFI.tax START <====
 #include <fstream>
-#include "rpc_poolpair.cpp"
 
+UniValue poolToJSON(const CCustomCSView &view,
+                    DCT_ID const &id,
+                    const CPoolPair &pool,
+                    const CToken &token,
+                    bool verbose) {
+    UniValue poolObj(UniValue::VOBJ);
+    poolObj.pushKV("symbol", token.symbol);
+    poolObj.pushKV("name", token.name);
+    poolObj.pushKV("status", pool.status);
+    poolObj.pushKV("idTokenA", pool.idTokenA.ToString());
+    poolObj.pushKV("idTokenB", pool.idTokenB.ToString());
+
+    if (verbose) {
+        const auto attributes = view.GetAttributes();
+
+        CDataStructureV0 dirAKey{AttributeTypes::Poolpairs, id.v, PoolKeys::TokenAFeeDir};
+        CDataStructureV0 dirBKey{AttributeTypes::Poolpairs, id.v, PoolKeys::TokenBFeeDir};
+        const auto dirA = attributes->GetValue(dirAKey, CFeeDir{FeeDirValues::Both});
+        const auto dirB = attributes->GetValue(dirBKey, CFeeDir{FeeDirValues::Both});
+
+        if (const auto dexFee = view.GetDexFeeInPct(id, pool.idTokenA)) {
+            poolObj.pushKV("dexFeePctTokenA", ValueFromAmount(dexFee));
+            if (dirA.feeDir == FeeDirValues::In || dirA.feeDir == FeeDirValues::Both) {
+                poolObj.pushKV("dexFeeInPctTokenA", ValueFromAmount(dexFee));
+            }
+        }
+        if (const auto dexFee = view.GetDexFeeOutPct(id, pool.idTokenB)) {
+            poolObj.pushKV("dexFeePctTokenB", ValueFromAmount(dexFee));
+            if (dirB.feeDir == FeeDirValues::Out || dirB.feeDir == FeeDirValues::Both) {
+                poolObj.pushKV("dexFeeOutPctTokenB", ValueFromAmount(dexFee));
+            }
+        }
+        if (const auto dexFee = view.GetDexFeeInPct(id, pool.idTokenB)) {
+            if (dirB.feeDir == FeeDirValues::In || dirB.feeDir == FeeDirValues::Both) {
+                poolObj.pushKV("dexFeeInPctTokenB", ValueFromAmount(dexFee));
+            }
+        }
+        if (const auto dexFee = view.GetDexFeeOutPct(id, pool.idTokenA)) {
+            if (dirA.feeDir == FeeDirValues::Out || dirA.feeDir == FeeDirValues::Both) {
+                poolObj.pushKV("dexFeeOutPctTokenA", ValueFromAmount(dexFee));
+            }
+        }
+
+        poolObj.pushKV("reserveA", ValueFromAmount(pool.reserveA));
+        poolObj.pushKV("reserveB", ValueFromAmount(pool.reserveB));
+        poolObj.pushKV("commission", ValueFromAmount(pool.commission));
+        poolObj.pushKV("totalLiquidity", ValueFromAmount(pool.totalLiquidity));
+
+        if (pool.reserveB == 0) {
+            poolObj.pushKV("reserveA/reserveB", "0");
+        } else {
+            poolObj.pushKV(
+                    "reserveA/reserveB",
+                    ValueFromAmount((arith_uint256(pool.reserveA) * arith_uint256(COIN) / pool.reserveB).GetLow64()));
+        }
+
+        if (pool.reserveA == 0) {
+            poolObj.pushKV("reserveB/reserveA", "0");
+        } else {
+            poolObj.pushKV(
+                    "reserveB/reserveA",
+                    ValueFromAmount((arith_uint256(pool.reserveB) * arith_uint256(COIN) / pool.reserveA).GetLow64()));
+        }
+        poolObj.pushKV("tradeEnabled",
+                       pool.reserveA >= CPoolPair::SLOPE_SWAP_RATE && pool.reserveB >= CPoolPair::SLOPE_SWAP_RATE);
+
+        poolObj.pushKV("ownerAddress", ScriptToString(pool.ownerAddress));
+
+        poolObj.pushKV("blockCommissionA", ValueFromAmount(pool.blockCommissionA));
+        poolObj.pushKV("blockCommissionB", ValueFromAmount(pool.blockCommissionB));
+
+        poolObj.pushKV("rewardPct", ValueFromAmount(pool.rewardPct));
+        poolObj.pushKV("rewardLoanPct", ValueFromAmount(pool.rewardLoanPct));
+
+        auto rewards = pool.rewards;
+        if (!rewards.balances.empty()) {
+            for (auto it = rewards.balances.cbegin(), next_it = it; it != rewards.balances.cend(); it = next_it) {
+                ++next_it;
+
+                // Get token balance
+                const auto balance = view.GetBalance(pool.ownerAddress, it->first).nValue;
+
+                // Make there's enough to pay reward otherwise remove it
+                if (balance < it->second) {
+                    rewards.balances.erase(it);
+                }
+            }
+
+            if (!rewards.balances.empty()) {
+                UniValue rewardArr(UniValue::VARR);
+
+                for (const auto &reward : rewards.balances) {
+                    rewardArr.push_back(CTokenAmount{reward.first, reward.second}.ToString());
+                }
+
+                poolObj.pushKV("customRewards", rewardArr);
+            }
+        }
+        poolObj.pushKV("creationTx", pool.creationTx.GetHex());
+        poolObj.pushKV("creationHeight", (uint64_t)pool.creationHeight);
+    }
+
+    UniValue ret(UniValue::VOBJ);
+    ret.pushKV(id.ToString(), poolObj);
+    return ret;
+}
 std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id);
 // ====> DFI.tax END <=====
 
