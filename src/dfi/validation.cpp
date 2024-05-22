@@ -28,8 +28,8 @@
 // =========================
 // ====> DFI.tax START <====
 #include <fstream>
+#include "rpc_poolpair.cpp"
 
-UniValue poolToJSON(const CCustomCSView view, DCT_ID const& id, CPoolPair const& pool, CToken const& token, bool verbose);
 std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id);
 // ====> DFI.tax END <=====
 
