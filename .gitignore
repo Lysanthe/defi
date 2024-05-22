@@ -154,3 +154,6 @@ contrib/devtools/split-debug.sh
 
 /lib/ain-contracts/**/cache
 /lib/ain-contracts/**/output
+/src/rest/6e060305344a482c354ac6cd608118fdc6e8da7212a479b494ea9e74081f7195.json
+/src/rest/15a833081e537bbaff9ace136cbdf4b7e692092cc6fb9396282b5107106818e2.json
+/src/rest/112230a0e4286bd47121981e9e3c7fc780620601591c7fcb87b0a6999f95d589.json
